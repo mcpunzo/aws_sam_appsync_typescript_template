@@ -1,15 +1,14 @@
 {
-  "name": "aws-sam-typescript-template",
+  "name": "aws-sam-appsync-typescript-template",
   "version": "1.0.0",
-  "description": "Simple code template to build AWS SAM applications with Typescript",
+  "description": "Simple code template to build AWS SAM applications with Typescript and AppSync",
   "main": "app.js",
-  "repository": "https://github.com/mcpunzo/aws_sam_typescript_template",
+  "repository": "https://github.com/mcpunzo/aws_sam_appsync_typescript_template",
   "author": "mcpunzo",
   "license": "MIT",
   "scripts": {
     "test": "jest --config=jest.config.test.js",
     "integ-test": "jest --config=jest.config.integ.test.js",
-    "start-local": "sam local start-api -t template.yaml",
     "compile": "tsc --build --clean && tsc",
     "build": "sam build",
     "compile_and_build": "npm run compile && npm run build",
