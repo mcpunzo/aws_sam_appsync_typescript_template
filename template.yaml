@@ -1,44 +1,171 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  AWS SAM TYPESCRIPT TEMPLATE
+  AWS SAM TEMPLATE FOR Typescript AND APPSYNC
 
-  Sample SAM Template for Typescript
-  
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+  Sample SAM Template for Typescript and Graphql with AppSync
+
 Globals:
   Function:
-    Timeout: 3
+    Timeout: 100
+    MemorySize: 128
+    Runtime: nodejs14.x
     Tracing: Active
     CodeUri: built
   Api:
     TracingEnabled: True
 
 Resources:
-  DefaultFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+##### AppSync Configuration #####
+  AppSyncApi:
+    Type: AWS::AppSync::GraphQLApi
     Properties:
-      Handler: app.lambdaHandler
-      Runtime: nodejs14.x
-      Architectures:
-        - x86_64
-      Events:
-        HelloWorld:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
-          Properties:
-            Path: '/hello'
-            Method: get
+      AuthenticationType: API_KEY
+      Name: ConcertGraphqlGateway
 
+  AppSyncSchema:
+    Type: AWS::AppSync::GraphQLSchema
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      DefinitionS3Location: schema.graphql
+
+  AppSyncApiKey:
+    Type: AWS::AppSync::ApiKey
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      Description: key for testing
+            
+  AppSyncApiServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole      
+  
+##### Resolvers and Datasources for GetIdemById #####
+  GetItemByIdAppSyncResolverFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: get-by-id.getByIdResolver
+      Description: Retrieves the item by its ID.
+      
+  GetItemByIdAppSyncDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      Description: Get Item By Id Direct Lambda
+      Name: Get_Item_By_Id
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt GetItemByIdAppSyncResolverFunction.Arn
+      ServiceRoleArn: !GetAtt AppSyncApiServiceRole.Arn
+
+  GetItemByIdResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      DataSourceName: !GetAtt GetItemByIdAppSyncDataSource.Name
+      FieldName: getById
+      TypeName: Query
+      Kind: UNIT
+
+
+##### Resolvers and Datasources for GetAll #####
+  GetAllAppSyncResolverFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: get-all.getAllResolver
+      Timeout: 120
+      Description: Get All Items
+
+  GetAllAppSyncDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      Description: Get All Items Item Direct Lambda
+      Name: Get_All_Items
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt GetAllAppSyncResolverFunction.Arn
+      ServiceRoleArn: !GetAtt AppSyncApiServiceRole.Arn
+
+  GetAllResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      DataSourceName: !GetAtt GetAllAppSyncDataSource.Name
+      FieldName: items
+      TypeName: Query
+      Kind: UNIT
+
+##### Resolvers and Datasources for PutItem #####
+  PutItemAppSyncResolverFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: put-item.putItemResolver
+      Description: Insert a new Item.
+      
+  PutItemAppSyncDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt AppSyncApi.ApiId
+      Description: Put Item Direct Lambda
+      Name: Put_Item
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt PutItemAppSyncResolverFunction.Arn
+      ServiceRoleArn: !GetAtt AppSyncApiServiceRole.Arn
+
+  PutItemResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId: !GetAtt AppSyncApi.ApiId
+        DataSourceName: !GetAtt PutItemAppSyncDataSource.Name
+        FieldName: putItem
+        TypeName: Mutation
+        Kind: UNIT
+
+##### Policies #####
+
+  AppSyncApiServicePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName:
+        AppSyncLambdaInvokePolicy
+      Roles:
+        - !Ref AppSyncApiServiceRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource: 
+              - !GetAtt GetItemByIdAppSyncResolverFunction.Arn
+              - !GetAtt GetAllAppSyncResolverFunction.Arn
+  
+  PutItemAppSyncServicePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName:
+        AppSyncLambdaMutationPolicy
+      Roles:
+        - !Ref AppSyncApiServiceRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource:
+              - !GetAtt PutItemAppSyncResolverFunction.Arn
+  
 Outputs:
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  Api:
-    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  DefaultFunction:
-    Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt DefaultFunction.Arn
-  DefaultFunctionIamRole:
-    Description: "Implicit IAM Role created for the Default function"
-    Value: !GetAtt DefaultFunctionRole.Arn
+  AppSyncEndpoint:
+    Description: "AppSync Endpoint URL"
+    Value: !GetAtt AppSyncApi.GraphQLUrl
+  AppSyncApiKey:
+    Description: "APIKey for AppSync Testing"
+    Value: !GetAtt AppSyncApiKey.ApiKey

@@ -1,0 +1,23 @@
+schema {
+    query: Query
+    mutation: Mutation
+}
+
+type Item {
+  id: ID!
+  name: String
+}
+
+input ItemInput {
+  id: ID!
+  name: String!
+}
+
+type Query {
+  items: [Item]
+  getById(id:ID!): Item
+}
+
+type Mutation {
+  putItem(input:ItemInput!): Item
+}

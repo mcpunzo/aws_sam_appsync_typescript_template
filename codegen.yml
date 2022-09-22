@@ -1,0 +1,24 @@
+overwrite: true
+
+schema:
+  - schema.graphql
+  - appsync.graphql
+
+config:
+  scalars:
+    AWSJSON: string
+    AWSDate: string
+    AWSTime: string
+    AWSDateTime: string
+    AWSTimestamp: number
+    AWSEmail: string
+    AWSURL: string
+    AWSPhone: string
+    AWSIPAddress: string
+
+
+generates:
+  handlers/appsync.d.ts:
+    plugins:
+      - typescript
+
