@@ -1,7 +1,7 @@
 # aws_sam_appsync_typescript_template
 
-This is a simple prject template for building AWS Serverless applications with AppSync using AWS SAM and typescript
-This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI or NPM. 
+This is a simple project template for building AWS Serverless applications with AppSync using AWS SAM and typescript
+it contains source code and supporting files for a serverless application that you can deploy with the SAM CLI or NPM. 
 The application uses several AWS resources, including Lambda functions and an API Gateway API. These resources are defined in the `template.yaml` file in this project. 
 
 ## What you need to run this project
